@@ -1,3 +1,9 @@
+'''
+# 指定VOC地址
+# voc格式转json,用作导入精灵助手
+'''
+
+
 import json
 import os
 import time
@@ -18,7 +24,7 @@ def xml_to_json_third(root_dir):
         tree = ET.parse(path_)
         root = tree.getroot()
         json_name = xmlfile.split('.')[0]
-        img_path = os.path.join(jpg_path, json_name+".jpg")
+        img_path = os.path.join(jpg_path, json_name + ".jpg")
         size = root.find('size')
         try:
             depth = int(float(size.find('depth').text))
@@ -39,13 +45,13 @@ def xml_to_json_third(root_dir):
         json_dic = dict(path=img_path, outputs=dict(object=list_object), time_labeled=int(time.time()),
                         labeled=True, size=dict(width=width, height=height, depth=depth))
 
-        print("已处理:{}".format(count))
         json_file_path = os.path.join(json_path, json_name) + ".json"
         with open(json_file_path, 'w') as f:
             json.dump(json_dic, f)
+        if count % 100 == 0:
+            print(f"一共{len(files)},已处理:{count}, 剩余{len(files) - count}")
 
 
 if __name__ == '__main__':
-    # 指定VOC地址
-    root_dir = r'G:\tmp\.so\VOC2007'
+    root_dir = r'G:\tmp\20220325\cut_data\data4'
     xml_to_json_third(root_dir)
