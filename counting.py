@@ -1,3 +1,9 @@
+#! python3
+# _*_ coding: utf-8 _*_
+# @Time : 2023/6/24 0:24 
+# @Author : Jovan
+# @File : counting.py
+# @desc : 传入两次坐标计算进出
 from collections import deque
 import math
 
