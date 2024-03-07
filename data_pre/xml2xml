@@ -1,0 +1,198 @@
+#! python3
+# _*_ coding: utf-8 _*_
+# @Time : 2024/3/1 15:58 
+# @Author : Jovan
+# @File : xml2xml.py
+# @desc :
+import time
+import xml.etree.ElementTree as ET
+from xml.dom.minidom import Document
+from tqdm import tqdm  # 用于在循环中显示进度条
+
+import os
+
+
+def gen_xml_2(json_name, json_data, root_dir):
+    xml_name = os.path.splitext(json_name)[0] + '.xml'
+    img_name = json_name
+    doc = Document()
+    annotation = doc.createElement("annotation")
+    doc.appendChild(annotation)
+
+    folder = doc.createElement("folder")
+    annotation.appendChild(folder)
+    folder.appendChild(doc.createTextNode('train_imgs'))
+
+    filename = doc.createElement("filename")
+    annotation.appendChild(filename)
+    filename.appendChild(doc.createTextNode(img_name))
+
+    path = doc.createElement("path")
+    annotation.appendChild(path)
+    path.appendChild(doc.createTextNode(img_name))
+
+    source = doc.createElement("source")
+    annotation.appendChild(source)
+    database = doc.createElement("database")
+    source.appendChild(database)
+    database.appendChild(doc.createTextNode('Unknown'))
+
+    size = doc.createElement("size")
+    annotation.appendChild(size)
+
+    width = doc.createElement("width")
+    size.appendChild(width)
+    width.appendChild(doc.createTextNode(str(json_data['size']['width'])))
+
+    height = doc.createElement("height")
+    size.appendChild(height)
+    height.appendChild(doc.createTextNode(str(json_data['size']['height'])))
+
+    depth = doc.createElement("depth")
+    size.appendChild(depth)
+    depth.appendChild(doc.createTextNode('3'))
+
+    segmented = doc.createElement("segmented")
+    annotation.appendChild(segmented)
+    segmented.appendChild(doc.createTextNode('0'))
+    objects = json_data['outputs']['object']
+    # ig_class = ['person','door','gline','fire']
+    for i in objects:
+        obj = doc.createElement("object")
+        annotation.appendChild(obj)
+
+        name = doc.createElement("name")
+        name.appendChild(doc.createTextNode(str(i['name'])))
+
+        pose = doc.createElement("pose")
+        pose.appendChild(doc.createTextNode('Unspecified'))
+
+        truncated = doc.createElement("truncated")
+        truncated.appendChild(doc.createTextNode('0'))
+
+        occluded = doc.createElement("occluded")
+        occluded.appendChild(doc.createTextNode('0'))
+
+        difficult = doc.createElement("difficult")
+        difficult.appendChild(doc.createTextNode('0'))
+
+        bndbox = doc.createElement("bndbox")
+
+        obj.appendChild(name)
+        obj.appendChild(pose)
+        obj.appendChild(truncated)
+        obj.appendChild(occluded)
+        obj.appendChild(difficult)
+        obj.appendChild(bndbox)
+        obj.appendChild(bndbox)
+
+        xmin = doc.createElement("xmin")
+        xmin.appendChild(doc.createTextNode(str(round(i['bndbox']['xmin']))))
+
+        ymin = doc.createElement("ymin")
+        ymin.appendChild(doc.createTextNode(str(round(i['bndbox']['ymin']))))
+
+        xmax = doc.createElement("xmax")
+        xmax.appendChild(doc.createTextNode(str(round(i['bndbox']['xmax']))))
+
+        ymax = doc.createElement("ymax")
+        ymax.appendChild(doc.createTextNode(str(round(i['bndbox']['ymax']))))
+
+        bndbox.appendChild(xmin)
+        bndbox.appendChild(ymin)
+        bndbox.appendChild(xmax)
+        bndbox.appendChild(ymax)
+    with open(os.path.join(root_dir, xml_name), 'w') as f:
+        f.write(doc.toprettyxml(indent="  "))
+
+
+def read_xml(xml_file, obj_list, need_class):
+    '''
+    读取 XML 文件，提取标注信息
+    :param xml_file:
+    :param obj_list:
+    :param need_class:
+    :return:
+    '''
+    # 解析 XML 文件
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
+
+    # 遍历 XML 文件的标注对象
+    for object_elem in root.findall("object"):
+        # 获取标注对象的名称
+        name_elem = object_elem.find("name")
+        object_name = name_elem.text
+        is_append = False
+        if len(need_class) == 0:
+            is_append = True
+        else:
+            if object_name in need_class:
+                is_append = True
+        if is_append:
+            print("Object name:", object_name)
+            # 获取标注对象的边界框信息
+            bbox_elem = object_elem.find("bndbox")
+            xmin = int(bbox_elem.find("xmin").text)
+            ymin = int(bbox_elem.find("ymin").text)
+            xmax = int(bbox_elem.find("xmax").text)
+            ymax = int(bbox_elem.find("ymax").text)
+            print("Bounding box:", xmin, ymin, xmax, ymax)
+            object_ = {}
+            object_['name'] = object_name
+            object_['bndbox'] = {'xmin': xmin, 'ymin': ymin, 'xmax': xmax, 'ymax': ymax}
+            obj_list.append(object_)
+
+
+def xml_list(xml_path):
+    xml_list = os.listdir(xml_path)
+    xml_path_list = []
+    for index, xml_file in enumerate(xml_list):
+        xml_path_list.append(os.path.join(xml_path, xml_file))
+    return xml_path_list
+
+
+def gen_new_xml(src_xml1, src_xml2,target_xml):
+    '''
+    生成新的 XML 文件
+    :param src_xml1:
+    :param src_xml2:
+    :return:
+    '''
+    # 解析 XML 文件
+    tree = ET.parse(src_xml1)
+    root = tree.getroot()
+    filename = root.find('filename').text
+    obj_list = []
+    json_data = {}
+    json_data['path'] = os.path.basename(root.find('path').text)
+    json_data['time_labeled'] = int(time.time())
+    json_data['labeled'] = True
+    json_data['size'] = {'width': root.find('size').find('width').text, 'height': root.find('size').find('height').text,
+                         'depth': root.find('size').find('depth').text}
+    need_class = []
+    read_xml(src_xml1, obj_list, need_class)
+    if len(src_xml2) >= 1:
+        read_xml(src_xml2, obj_list, need_class)
+    json_data['outputs'] = {'object': obj_list}
+    gen_xml_2(filename, json_data, target_xml)
+
+
+def xml_xml():
+    src_xml_path1 = r""
+    src_xml_path2 = r""
+    target_xml = r""
+    xml_path_list = xml_list(src_xml_path1)
+    for index, xml_path in enumerate(xml_path_list):
+        xml_name = os.path.basename(xml_path)
+        src_xml1 = xml_path
+        src_xml2 = os.path.join(src_xml_path2, xml_name)
+        if not os.path.exists(src_xml2):
+            print(f"path:{src_xml2} not exists,name:{xml_name}")
+            src_xml2 = ''
+        gen_new_xml(src_xml1, src_xml2,target_xml)
+
+
+if __name__ == '__main__':
+    # read_xml()
+    xml_xml()
