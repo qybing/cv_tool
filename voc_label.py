@@ -35,7 +35,11 @@ def convert_annotation(image_id,ann_path,label_path):
     w = int(size.find('width').text)
     h = int(size.find('height').text)
     for obj in root.iter('object'):
-        difficult = obj.find('difficult').text
+        try:
+            difficult = obj.find('difficult').text
+        except Exception as e:
+            print(f"{e},name:{ann_name}")
+            difficult = 0
         cls = obj.find('name').text
         if cls not in classes or int(difficult) == 1:
             continue
