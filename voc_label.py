@@ -1,4 +1,5 @@
-import xml.etree.ElementTree as ET
+import chardet
+from lxml import etree
 import shutil
 import os
 
@@ -17,6 +18,20 @@ def convert(size, box):
     return (x, y, w, h)
 
 
+def detect_encoding(file_path):
+    with open(file_path, 'rb') as f:
+        raw_data = f.read()
+        result = chardet.detect(raw_data)
+        return result['encoding']
+
+
+def get_images_id(txt_path):
+    images_id = []
+    with open(txt_path, 'r') as f:
+        for line in f.readlines():
+            images_id.append(line.strip())
+    return images_id
+
 def convert_annotation(image_id,ann_path,label_path):
     '''
     生成txt文件
@@ -27,10 +42,13 @@ def convert_annotation(image_id,ann_path,label_path):
     '''
     ann_name = image_id + '.xml'
     txt_name = image_id + '.txt'
-    in_file = open(f'{os.path.join(ann_path,ann_name)}')
     out_file = open(f'{os.path.join(label_path,txt_name)}', 'w')
-    tree = ET.parse(in_file)
-    root = tree.getroot()
+    try:
+        encoding = detect_encoding(os.path.join(ann_path, ann_name))
+        tree = etree.parse(os.path.join(ann_path,ann_name),parser=etree.XMLParser(encoding=encoding))
+        root = tree.getroot()
+    except Exception as e:
+        print(f"file:{os.path.join(ann_path,ann_name)},error:{e}")
     size = root.find('size')
     w = int(size.find('width').text)
     h = int(size.find('height').text)
@@ -85,9 +103,15 @@ if not os.path.exists(dst_img_path):
 copy_image(src_img_path,dst_img_path)
 
 for image_set in sets:
-    image_ids = open(os.path.join(train_path, image_set + '.txt')).read().strip().split()
+    # image_ids = open(os.path.join(train_path, image_set + '.txt')).read().strip().split()
+    image_ids = get_images_id(os.path.join(train_path, image_set + '.txt'))
     list_file = open('%s.txt' % (image_set), 'w')
     for image_id in image_ids:
         name = convert_annotation(image_id,ann_path,label_path)
-        list_file.write(f'{os.path.join(current_dir, dst_img_path,name)}\n')
+        try:
+            list_file.write(f'{os.path.join(current_dir, dst_img_path,name)}\n')
+        except Exception as e:
+            print(f"error:{e}")
+            name = image_id + os.path.splitext(name)[1]
+            list_file.write(f'{os.path.join(current_dir, dst_img_path,name)}\n')
     list_file.close()
