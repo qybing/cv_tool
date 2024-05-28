@@ -1,7 +1,14 @@
 import os
 import glob
 import random
-import xml.etree.ElementTree as ET
+from lxml import etree
+
+def detect_encoding(file_path):
+    with open(file_path, 'rb') as f:
+        raw_data = f.read()
+        result = chardet.detect(raw_data)
+        return result['encoding']
+
 
 config = {
     "Annotation": "Annotations",
@@ -26,7 +33,14 @@ test_list = data_xml_list[train_valid_point:]
 
 label = set()
 for xml_path in data_xml_list:
-    tree = ET.parse(xml_path)
+    try:
+        encoding = detect_encoding(xml_path)
+        tree1 = etree.parse(xml_path, parser=etree.XMLParser(encoding=encoding))
+        tree = tree1.getroot()
+    except Exception as e:
+        print(xml_path)
+        print(f"Error: {e}")
+
     for obj in tree.findall('object'):
         label.add(obj.find('name').text)
 
