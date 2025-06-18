@@ -1,6 +1,7 @@
 import os
 import argparse
 import json
+from datetime import datetime
 from typing import Dict, List
 from lxml import etree
 
@@ -19,7 +20,8 @@ def detect_encoding(file_path):
 def get_label2id(labels_path: str) -> Dict[str, int]:
     """id is 1 start"""
     with open(labels_path, 'r') as f:
-        labels_str = f.read().split()
+        labels_str = [line.strip() for line in f]
+        # labels_str = f.read().split()
     labels_ids = list(range(0, len(labels_str) + 1))
     return dict(zip(labels_str, labels_ids))
 
@@ -28,6 +30,7 @@ def get_annpaths(ann_dir_path: str = None,
                  ann_ids_path: str = None,
                  ext: str = '',
                  annpaths_list_path: str = None) -> List[str]:
+
     # If use annotation paths list
     if annpaths_list_path is not None:
         with open(annpaths_list_path, 'r', encoding='utf-8') as f:
@@ -100,9 +103,20 @@ def convert_xmls_to_cocojson(annotation_paths: List[str],
                              label2id: Dict[str, int],
                              output_jsonpath: str,
                              extract_num_from_imgid: bool = True):
+    # 获取当前时间并格式化显示
+    current_time = datetime.now()
+    formatted_time = current_time.strftime("%Y-%m-%d")
     output_json_dict = {
+        "info": {
+            "description": "COCO format dataset converted from VOC",
+            "version": "1.0",
+            "year": formatted_time[0:4],
+            "contributor": "auto-conversion",
+            "date_created": formatted_time
+        },
+        "licenses": [{"name": "Unknown"}],
         "images": [],
-        "type": "instances",
+        # "type": "instances",
         "annotations": [],
         "categories": []
     }
@@ -123,6 +137,7 @@ def convert_xmls_to_cocojson(annotation_paths: List[str],
         img_info = get_image_info(annotation_root=ann_root, file_name=a_path,
                                   extract_num_from_imgid=extract_num_from_imgid)
         img_id = img_info['id']
+
         output_json_dict['images'].append(img_info)
 
         for obj in ann_root.findall('object'):
@@ -144,18 +159,18 @@ def convert_xmls_to_cocojson(annotation_paths: List[str],
 def main():
     parser = argparse.ArgumentParser(
         description='This script support converting voc format xmls to coco format json')
-    parser.add_argument('--ann_dir', type=str, default=r'xxxx/Annotations',
+    parser.add_argument('--ann_dir', type=str, default=r'/xx/VOC/Annotations',
                         help='path to annotation files directory. It is not need when use --ann_paths_list')
     parser.add_argument('--ann_ids', type=str,
-                        default=r'xxxx/ImageSets/Main/train.txt',
+                        default=r'/xx/VOC/ImageSets/Main/train.txt',
                         help='path to annotation files ids list. It is not need when use --ann_paths_list')
 
     parser.add_argument('--ann_paths_list', type=str, default=None,
                         help='path of annotation paths list. It is not need when use --ann_dir and --ann_ids')
 
-    parser.add_argument('--labels', type=str, default=r'xxxx/label.txt',
+    parser.add_argument('--labels', type=str, default=r'/xx/VOC/label.txt',
                         help='path to label list.')
-      parser.add_argument('--output', type=str, default=r'xxxx/train.json',
+    parser.add_argument('--output', type=str, default=r'/xxx/VOC/train.json',
                         help='path to output json file')
     parser.add_argument('--ext', type=str, default='xml', help='additional extension of annotation file')
     parser.add_argument('--extract_num_from_imgid', action="store_true",
@@ -175,6 +190,14 @@ def main():
         extract_num_from_imgid=args.extract_num_from_imgid
     )
 
+def xiufu_josn():
+    import json
+    json_path = r'/home/jovan/dataset/shanxi/detect/VOC/val.json'
+    with open(json_path, 'r') as f:
+        data = json.load(f)
+    data['info'] = data.get('info', {"description": "Auto-generated info"})
+    with open(json_path, 'w') as f:
+        json.dump(data, f)
 
 if __name__ == '__main__':
     '''
@@ -184,3 +207,4 @@ if __name__ == '__main__':
     output         输出的json的位置  
     '''
     main()
+    # xiufu_josn()
