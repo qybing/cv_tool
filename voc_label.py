@@ -63,10 +63,10 @@ def convert_annotation(image_id, ann_path, label_path,class_count):
                  float(xmlbox.find('ymax').text))
             bb = convert((w, h), b)
             out_file.write(str(cls_id) + " " + " ".join([str(a) for a in bb]) + '\n')
-            if classes not in class_count:
-                class_count[classes] = 1
+            if cls not in class_count:
+                class_count[cls] = 1
             else:
-                class_count[classes] += 1
+                class_count[cls] += 1
     except Exception as e:
         print(f"file:{os.path.join(ann_path, ann_name)},name:{root.find('filename').text}, error:{e}")
     return root.find('filename').text
@@ -113,10 +113,7 @@ for img_name in img_list:
     img_id = img_name_list[0]
     img_dict[img_id] = img_name
 
-# 类别
-classes = ['poster', 'edible oil', 'pot', 'barreled laundry detergent', 'dishwashing liquid', 'tissue paper', 'roll type paper', 'smart screen',
-           'gun type camera', 'audio system', 'tent', 'bucket', 'router', 'electronic blood pressure monitor',
-           'table', 'bags laundry detergent', 'packaging box', 'banner', 'rice', 'dome camera', 'towel','trash can']
+classes = ['smoke']
 print(f"classes:{len(classes)}")
 if not os.path.exists(label_path):
     os.makedirs(label_path)
