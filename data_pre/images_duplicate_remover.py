@@ -8,7 +8,7 @@ import imghdr
 
 # ======== 配置区域 (按需修改这些变量) ========
 SOURCE_DIR = 'JPEGImages'  # 要扫描的源目录路径
-DUPLICATE_DIR = "images_duplicate"  # 备份目录路径（重复文件将移到这里）
+DUPLICATE_DIR = "imagesduplicate"  # 备份目录路径（重复文件将移到这里）
 USE_FAST_HASH = True  # 是否使用快速哈希模式 (True/False)
 MIN_FILE_SIZE = 4096  # 最小处理的图片大小(字节)
 
