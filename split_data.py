@@ -3,21 +3,17 @@ import glob
 import random
 from lxml import etree
 
-def detect_encoding(file_path):
-    with open(file_path, 'rb') as f:
-        raw_data = f.read()
-        result = chardet.detect(raw_data)
-        return result['encoding']
+import chardet
 
-
+base_dir = '/home/jovan/dataset/guangdong/climb_data/climb_dataset/VOC'
 config = {
-    "Annotation": "Annotations",
-    "JPEGImages": "JPEGImages",
+    "Annotation": os.path.join(base_dir, 'Annotations'),
+    "JPEGImages": os.path.join(base_dir, 'JPEGImages'),
 }
-
-train_per = 0.88
+ImageSets_dir = os.path.join(base_dir, 'ImageSets/Main')
+train_per = 0.9
 valid_per = 0.1
-test_per = 0.02
+test_per = 0.0
 
 data_xml_list = glob.glob(os.path.join(config['Annotation'], '*.xml'))
 random.seed(666)
@@ -32,6 +28,15 @@ valid_list = data_xml_list[train_point:train_valid_point]
 test_list = data_xml_list[train_valid_point:]
 
 label = set()
+
+
+def detect_encoding(file_path):
+    with open(file_path, 'rb') as f:
+        raw_data = f.read()
+        result = chardet.detect(raw_data)
+        return result['encoding']
+
+
 for xml_path in data_xml_list:
     try:
         encoding = detect_encoding(xml_path)
@@ -43,12 +48,13 @@ for xml_path in data_xml_list:
 
     for obj in tree.findall('object'):
         label.add(obj.find('name').text)
-
-with open('ImageSets/Main/train.txt', 'w') as ftrain, \
-     open('ImageSets/Main/val.txt', 'w') as fvalid, \
-     open('ImageSets/Main/test.txt', 'w') as ftest, \
-     open('label.txt', 'w') as flabel:
+os.makedirs(ImageSets_dir, exist_ok=True)
+with open(os.path.join(ImageSets_dir, 'train.txt'), 'w') as ftrain, \
+        open(os.path.join(ImageSets_dir, 'val.txt'), 'w') as fvalid, \
+        open(os.path.join(ImageSets_dir, 'test.txt'), 'w') as ftest, \
+        open(os.path.join(base_dir, 'label.txt'), 'w') as flabel:
     for i in train_list:
+        # print(f"name:{os.path.splitext(os.path.basename(i))[0]}")
         ftrain.write(os.path.splitext(os.path.basename(i))[0] + "\n")
     for j in valid_list:
         fvalid.write(os.path.splitext(os.path.basename(j))[0] + "\n")
@@ -57,7 +63,7 @@ with open('ImageSets/Main/train.txt', 'w') as ftrain, \
     for l in label:
         flabel.write(l + "\n")
 
-print(f"总数据量: {data_length}, 训练集: {len(train_list)}, 验证集: {len(valid_list)}, 测试集: {len(test_list)}, 标签: {len(label)}")
-print(f"标签: {label}")
+print(
+    f"总数据量: {data_length}, 训练集: {len(train_list)}, 验证集: {len(valid_list)}, 测试集: {len(test_list)}, 标签: {len(label)}")
+print(f"标签: {label},总共有{len(label)}个标签")
 print("done!")
-
